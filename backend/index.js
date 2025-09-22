@@ -3,15 +3,23 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import 'dotenv/config'
 import connectDB from './configs/db.js'
+import authRouter from './routes/auth.route.js'
+import bodyParser from 'body-parser'
 
 const app = express()
 
 const PORT = process.env.PORT || 5000
 
 await connectDB()
+
+//middlewares
+app.use(express.json())//parse body data
 app.use(cookieParser())
-app.use(cors())
-app.use(express.json())
+app.use(bodyParser.urlencoded({ extended: true }))
+// app.use(cors())
+
+//Routes 
+app.use('/api/auth',authRouter)
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
