@@ -1,5 +1,5 @@
 import express from 'express'
-import { checkAuthenticate, logout, sendOtp, updateProfile, verifyOtp } from '../controllers/auth.controller.js'
+import { checkAuthenticate, getAllUsers, logout, sendOtp, updateProfile, verifyOtp } from '../controllers/auth.controller.js'
 import { authMiddleware } from '../middlewares/auth.middleware.js'
 import { multerMiddleware } from '../configs/cloudinary.config.js'
 
@@ -13,5 +13,6 @@ authRouter.get('/logout',logout)
 //  protected routes 
 authRouter.put('/update-profile',authMiddleware,multerMiddleware,updateProfile)
 authRouter.get('/check-auth',authMiddleware,checkAuthenticate)
+authRouter.get('/users',authMiddleware,getAllUsers)
 
 export default authRouter

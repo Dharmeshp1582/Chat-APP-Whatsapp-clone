@@ -5,6 +5,7 @@ import 'dotenv/config'
 import connectDB from './configs/db.js'
 import authRouter from './routes/auth.route.js'
 import bodyParser from 'body-parser'
+import chatRouter from './routes/chat.route.js'
 
 const app = express()
 
@@ -20,6 +21,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 
 //Routes 
 app.use('/api/auth',authRouter)
+app.use('/api/chat',chatRouter)
 
 app.get('/', (req, res) => {
   res.send('Hello World!')

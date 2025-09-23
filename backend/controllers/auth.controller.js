@@ -9,6 +9,7 @@ import { response } from "../utils/responseHandler.js";
 import {twilioService} from '../services/twilio.service.js'
 import { generateJwtToken } from "../utils/generateJwtToken.js";
 import { uploadFileOnCloudinary } from "../configs/cloudinary.config.js";
+import Conversation from "../models/conversation.model.js";
 
 export const sendOtp = async(req,res) => {
     const {phoneNumber, phoneSuffix,email} = req.body;
@@ -166,6 +167,26 @@ export const logout = async(req,res) => {
   try {
     res.clearCookie('auth_token',"",{expires: new Date(0)});
     return response(res,200,'User Logout successfully');
+    
+  } catch (error) {
+    console.log(error)
+    return response(res,500,'Internal server error');
+  }
+}
+
+export const getAllUsers = async(req,res) => {
+  const loggedInUser = req.user.userId;
+  try {
+    const users = await User.find({_id:{$ne:loggedInUser}}).select('username profilePicture lastSeen isOnline about phoneNumber phoneSuffix').lean();
+
+    const usersWithConversation = await Promise.all(users.map(async(user) => {
+      const conversation = await Conversation.findOne({participants:{$all:[loggedInUser,user?._id]}}).populate({path:'lastMessage',select:'content createdAt sender receiver'}).lean();
+      return {
+        ...user,
+        conversation : conversation || 0
+      };
+    }))
+    return response(res,200,'getting All users successfully',usersWithConversation);
     
   } catch (error) {
     console.log(error)
