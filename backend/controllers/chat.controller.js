@@ -71,6 +71,17 @@ export const sendMessage = async (req,res) => {
 
     const populatedMessage = await Message.findOne({_id: message?._id}).populate('sender',"username profilePicture").populate('receiver',"username profilePicture");
 
+     //emit socket event
+     if(req.io && req.socketUserMap){
+     const receiverSocketId = req.socketUserMap.get(receiverId);
+
+     if(receiverSocketId){
+      req.io.to(receiverSocketId).emit('receive_message',populatedMessage);
+      message.messageStatus = 'delivered';
+      await message.save();
+     }
+     }
+
     return response(res,200,'Message sent successfully',populatedMessage);
   } catch (error) {
     console.log(error)
@@ -163,6 +174,22 @@ export const markAsRead = async(req,res) => {
     $set:{messageStatus:'read'}
   })
 
+
+   //notify to original sender
+     if(req.io && req.socketUserMap){
+      for(const message of messages){
+        const senderSocketId = req.socketUserMap.get(message.sender.toString());
+        if(senderSocketId){
+          const updatedMessages = {
+_id: message._id,
+messageStatus:"read",
+          }
+          req.io.to(senderSocketId).emit('message_read',updatedMessages);
+          await message.save();
+        }
+      }
+     }
+
   return response(res,200,'Messages marked as read successfully',messages);
   } catch (error) {
     return response(res,500,'Internal server error');
@@ -187,6 +214,15 @@ export const deleteMessage = async(req,res) => {
 
 
     await message.deleteOne();
+
+
+     //emit socket event
+     if(req.io && req.socketUserMap){
+       const receiverSocketId = req.socketUserMap.get(message.receiver.toString());
+       if(receiverSocketId){
+        req.io.to(receiverSocketId).emit('message_deleted',messageId);
+       }
+     }
 
 
     return response(res,200,'Message deleted successfully');
