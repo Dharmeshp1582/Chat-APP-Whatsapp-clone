@@ -15,9 +15,7 @@ export const sendOtp = async (phoneNumber,phoneSuffix,email) => {
   }
 }
 
-
-export const verifyOtp = async (phoneNumber,phoneSuffix,email,otp) => {
-
+export const verifyOtp = async ({ phoneNumber, phoneSuffix, email, otp }) => {
   try {
     const response = await axiosInstance.post('/auth/verify-otp', {
       phoneNumber,
@@ -27,10 +25,10 @@ export const verifyOtp = async (phoneNumber,phoneSuffix,email,otp) => {
     });
     return response.data;
   } catch (error) {
-    console.error(error.message)
+    console.error(error.response?.data || error.message);
+    throw error; // so UI can catch and show toast
   }
-}
-
+};
 
 
 export const updateUserProfile = async (updateData) => {
