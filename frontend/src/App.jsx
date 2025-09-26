@@ -4,6 +4,9 @@ import Login from './pages/user-login/Login'
 import { Toaster } from 'react-hot-toast';
 import { ProtectedRoute, PublicRoute } from './Protected';
 import HomePage from './components/HomePage';
+import UserDetails from './components/UserDetails';
+import Status from './pages/statusSection/Status';
+import Setting from './pages/settingSection/Setting';
 
 const App = () => {
   return (
@@ -17,6 +20,9 @@ const App = () => {
 
       <Route element={<ProtectedRoute />}>
        <Route path='/' element={<HomePage />} />
+       <Route path='/user-profile' element={<UserDetails />} />
+       <Route path='/status' element={<Status />} />
+       <Route path='/setting' element={<Setting />} />
      </Route>
       </Routes>
     </>

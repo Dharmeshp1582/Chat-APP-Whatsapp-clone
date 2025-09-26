@@ -183,9 +183,10 @@ export const getAllUsers = async(req,res) => {
       const conversation = await Conversation.findOne({participants:{$all:[loggedInUser,user?._id]}}).populate({path:'lastMessage',select:'content createdAt sender receiver'}).lean();
       return {
         ...user,
-        conversation : conversation || 0
+        conversation : conversation || null
       };
     }))
+    console.log("user with conversation ",usersWithConversation)
     return response(res,200,'getting All users successfully',usersWithConversation);
     
   } catch (error) {
