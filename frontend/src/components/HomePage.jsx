@@ -16,7 +16,7 @@ const HomePage = () => {
       const result = await getAllUsers();
       if(result.status === 'success') {
         setAllUsers(result.data);
-        console.log("all users",result.data);
+        // console.log("all users",result.data);
       }
     } catch (error) {
       console.log(error);

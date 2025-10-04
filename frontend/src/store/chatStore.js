@@ -155,68 +155,94 @@ export const useChatStore = create((set,get) => ({
   },
 
   sendMessage: async (formData) => {
-    const senderId = formData.get("senderId");
-    const receiverId = formData.get("receiverId");
-    const media = formData.get("media");
-    const content = formData.get("content");
-    const messageStatus = formData.get("messageStatus");
+  const senderId = formData.get("senderId");
+  const receiverId = formData.get("receiverId");
+  const media = formData.get("media");
+  const content = formData.get("content");
+  const messageStatus = formData.get("messageStatus");
 
-    const socket = getSocket();
+  const { conversations } = get();
+  let conversationId = null;
 
-    const {conversations} = get();
-    let conversationId = null
-    if(conversations?.data?.length > 0){
-      const conversation = conversations.data.find((conversation)=> 
-      conv.participants.some((p)=> p._id === senderId
-    ) && 
-    conv.participants.some((p)=> p._id === receiverId)
+  // ✅ Check if conversation already exists
+  if (conversations?.data?.length > 0) {
+    const conversation = conversations.data.find((conv) =>
+      conv.participants.some((p) => p._id === senderId) &&
+      conv.participants.some((p) => p._id === receiverId)
     );
-    if(conversation){
-      conversationId =conversation._id 
-      set({currentConversation: conversationId})
+
+    if (conversation) {
+      conversationId = conversation._id;
+      set({ currentConversation: conversationId });
     }
+  }
+
+  // ✅ If no conversation exists, create one
+  if (!conversationId) {
+    try {
+      const { data } = await axiosInstance.post("/chats/create-conversation", {
+        senderId,
+        receiverId,
+      });
+      conversationId = data.data?._id || data._id;
+      set({ currentConversation: conversationId });
+    } catch (err) {
+      console.error("Error creating conversation:", err);
+      throw err;
     }
-    //temp message before actual response 
-    const  tempId = `temp-${Date.now()}`;
-    const optimisticMessage = {
-      _id : tempId,
-      sender: {_id: senderId},
-      receiver:{_id: receiverId},
-      conversation: conversationId,
-      imageOrVideoUrl: media && typeof media !== `string` ? URL.createObjectURL(media) : null,
-      content: content,
-      contentType: media ? media.type.startsWith("image") ? "image" : "video" : "text",
-      createdAt: new Date().toISOString(),
-      messageStatus
-  
-    }
-  set((state)=> ({
-    messages: [...state.messages, optimisticMessage]
+  }
+
+  // ✅ Optimistic message
+  const tempId = `temp-${Date.now()}`;
+  const optimisticMessage = {
+    _id: tempId,
+    sender: { _id: senderId },
+    receiver: { _id: receiverId },
+    conversation: conversationId,
+    imageOrVideoUrl:
+      media && typeof media !== "string" ? URL.createObjectURL(media) : null,
+    content,
+    contentType: media
+      ? media.type.startsWith("image")
+        ? "image"
+        : "video"
+      : "text",
+    createdAt: new Date().toISOString(),
+    messageStatus,
+  };
+
+  set((state) => ({
+    messages: [...state.messages, optimisticMessage],
   }));
 
   try {
-    const {data} = await axiosInstance.post("/chats/send-message",formData,
-      {headers : {"Content-Type":"multipart/form-data"}}
+    const { data } = await axiosInstance.post(
+      "/chats/send-message",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
     );
 
     const messageData = data.data || data;
 
-    //replace optimist message with real one
-    set((state)=> ({
-      messages: state.messages.map((msg)=> 
-      msg._id === tempId ? messageData : msg )
-    }))
+    // ✅ Replace optimistic with real message
+    set((state) => ({
+      messages: state.messages.map((msg) =>
+        msg._id === tempId ? messageData : msg
+      ),
+    }));
+
     return messageData;
   } catch (error) {
-    console.error("error sending message",error)
-    set((state)=> ({
-      messages: state.messages.map((msg)=> 
-      msg._id === tempId ? {...msg, messageStatus: "failed"} : msg )
-      ,error: error?.response?.data?.message || error?.message
-    }))
+    console.error("Error sending message:", error);
+    set((state) => ({
+      messages: state.messages.map((msg) =>
+        msg._id === tempId ? { ...msg, messageStatus: "failed" } : msg
+      ),
+      error: error?.response?.data?.message || error?.message,
+    }));
     throw error;
   }
-  },
+},
 
 
   receiveMessage: (message) => {

@@ -36,9 +36,9 @@ useEffect(() => {
  }
 }, [location,setActiveTab]);
 
-if(!isMobile && !selectedContact) {
-  return null;
-}
+// if(!isMobile && !selectedContact) {
+//   return null;
+// }
 
  const sidebarContent = (
   <>

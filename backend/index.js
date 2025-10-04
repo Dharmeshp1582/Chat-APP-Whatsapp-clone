@@ -41,7 +41,7 @@ app.use((req, res, next) => {
 
 //Routes 
 app.use('/api/auth',authRouter)
-app.use('/api/chat',chatRouter)
+app.use('/api/chats',chatRouter)
 app.use('/api/status',statusRouter)
 
 app.get('/', (req, res) => {

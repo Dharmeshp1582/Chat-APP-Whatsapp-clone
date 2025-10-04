@@ -25,7 +25,7 @@ socket.on("connect",()=>{
   socket.emit("user connected",user._id);
 });
 
-socket.on("connect_error",(error)=> {
+socket.on("connection_error",(error)=> {
   console.log('socket connection error',error);
 })
 
