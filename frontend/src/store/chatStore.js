@@ -47,14 +47,18 @@ export const useChatStore = create((set,get) => ({
           })
     });
 
-    //handle reaction on message
-    socket.on("reaction_update", ({messageId,reactions}) => {
-            set((state)=> ({
-              messages: state.messages.map((msg)=> {
-                msg._id === messageId ? {...msg,reactions} : msg
-              })
-            }))
-          })
+    // Clean existing listeners
+socket.off("reaction_update");
+
+// ✅ Fix reaction update listener
+socket.on("reaction_update", ({ messageId, reactions }) => {
+  set((state) => ({
+    messages: state.messages.map((msg) =>
+      msg._id === messageId ? { ...msg, reactions } : msg
+    ),
+  }));
+});
+
 
           //handle remove message from localstorage 
           socket.on("message_deleted", ({deletedMessageId}) => {
@@ -329,13 +333,14 @@ export const useChatStore = create((set,get) => ({
   },
 
   //add/change reactions 
-  addReaction: async(messageId,emoji) => {
-    const socket = getSocket();
-    const {currentUser} = get();
-    if(socket && currentUser){
-      socket.emit("add_reaction", {messageId,emoji,userId:currentUser?._id});
-    }
-  },
+  addReaction: async (messageId, emoji) => {
+  const socket = getSocket();
+  console.log("get socket is",getSocket())
+  const { currentUser } = get();
+  if (socket && currentUser) {
+    socket.emit("add_reaction", { messageId, emoji, userId: currentUser?._id });
+  }
+},
 
  startTyping : (receiverId)=> {
   const {currentConversation} = get();

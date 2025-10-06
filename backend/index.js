@@ -40,9 +40,9 @@ app.use((req, res, next) => {
 })
 
 //Routes 
-app.use('/api/auth',authRouter)
-app.use('/api/chats',chatRouter)
-app.use('/api/status',statusRouter)
+app.use('/auth',authRouter)
+app.use('/chats',chatRouter)
+app.use('/status',statusRouter)
 
 app.get('/', (req, res) => {
   res.send('Hello World!')

@@ -16,20 +16,30 @@ const App = () => {
   const {user} = useUserStore();
   const {setCurrentUser,initsocketListeners,cleanup} = useChatStore()
 
-  useEffect(() => {
-    if(user?._id){
-      const socket = initializeSocket();
-      if(socket){
- setCurrentUser(user);
- initsocketListeners();
-      }
-    }
+ useEffect(() => {
+  if (!user?._id) return;
 
+  const socket = initializeSocket();
+
+  // Wait until socket connects before listeners
+  socket.on("connect", () => {
+    console.log("✅ Socket connected in App.jsx:", socket.id);
+
+    setCurrentUser(user);
+    initsocketListeners();
+  });
+
+  socket.on("connect_error", (err) => {
+    console.error("❌ Socket connection error:", err.message);
+  });
+
+  // Cleanup on unmount
   return () => {
+    console.log("🧹 Cleaning up socket + store");
     cleanup();
     disconnectSocket();
-  }
-  },[user,setCurrentUser,initsocketListeners,cleanup])
+  };
+}, [user, setCurrentUser, initsocketListeners, cleanup]);
 
   return (
     <>

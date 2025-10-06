@@ -23,14 +23,15 @@ const messageSchema = new mongoose.Schema({
     type:String,
     enum:["text","image","video"]
   },
-  reactions: [{
-    user:{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User"
-    },
-    emoji:
-     { type:String},
-  }],
+   reactions: {
+    type: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        emoji: { type: String },
+      },
+    ],
+    default: [],
+  },
   messageStatus:{
     type:String,
    default:'send'
