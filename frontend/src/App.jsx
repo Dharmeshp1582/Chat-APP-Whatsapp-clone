@@ -10,6 +10,7 @@ import Setting from './pages/settingSection/Setting';
 import { useUserStore } from './store/useUserStore';
 import { disconnectSocket, initializeSocket } from './services/chat.service';
 import { useChatStore } from './store/chatStore';
+import Help from './components/Help';
 
 const App = () => {
 
@@ -55,6 +56,7 @@ const App = () => {
        <Route path='/user-profile' element={<UserDetails />} />
        <Route path='/status' element={<Status />} />
        <Route path='/setting' element={<Setting />} />
+       <Route path='/help' element={<Help />} />
      </Route>
       </Routes>
     </>

@@ -1,16 +1,24 @@
 import React, { useRef, useState } from "react";
 import { format } from "date-fns";
-import { FaCheck, FaCheckDouble, FaPlus, FaSmile } from "react-icons/fa";
+import {
+  FaCheck,
+  FaCheckDouble,
+  FaPlus,
+  FaRegCopy,
+  FaSmile,
+} from "react-icons/fa";
 import { HiDotsVertical } from "react-icons/hi";
 import useOutsideclick from "../../hooks/useOutsideclick";
 import EmojiPicker from "emoji-picker-react";
 import { RxCross2 } from "react-icons/rx";
+import { MdDelete } from "react-icons/md";
+import toast from "react-hot-toast";
 
 const MessageBubble = ({
   message,
   theme,
   currentUser,
-  deletedMessage,
+  deleteMessage,
   onReact,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -100,7 +108,10 @@ const MessageBubble = ({
 
         {/* Options (3-dots) */}
         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-          <button className="mt-1">
+          <button
+            className="mt-1"
+            onClick={() => setShowOptions((prev) => !prev)} // ✅ toggle showOptions
+          >
             <HiDotsVertical
               size={22}
               className={`p-1 rounded-full ${
@@ -125,7 +136,6 @@ const MessageBubble = ({
             onClick={() => setShowReactions(true)}
           >
             <FaSmile
-              onClick={() => setShowOptions(!showOptions)}
               className={`${
                 theme === "dark" ? "text-gray-300" : "text-gray-600"
               }`}
@@ -197,6 +207,48 @@ const MessageBubble = ({
                 {emoji} {count > 1 && <span className="text-xs">x{count}</span>}
               </span>
             ))}
+          </div>
+        )}
+
+        {showOptions && (
+          <div
+            ref={optionRef}
+            className={`absolute top-8 right-1 z-50 w-36 rounded-xl shadow-lg py-2 text-sm ${
+              theme === "dark"
+                ? "bg-[#1d1f1f] text-white"
+                : "bg-gray-100 text-black"
+            }`}
+          >
+            <button
+              className="flex items-center w-full px-4 py-2 gap-3 rounded-lg"
+              onClick={() => {
+                if (message.contentType === "text") {
+                  navigator.clipboard
+                    .writeText(message.content)
+                    .then(() => toast.success("Message copied to clipboard!"))
+                    .catch(() => toast.error("Failed to copy message"));
+                }
+                setShowOptions(false);
+              }}
+            >
+              <FaRegCopy size={14} />
+              <span>Copy</span>
+            </button>
+
+            {isUserMessage && (
+              <button
+                className="flex items-center w-full px-4 py-2 gap-3 rounded-lg text-red-600"
+                onClick={() => {
+                  deleteMessage(message?._id)
+                    .then(() => toast.success("Message Deleted Successfully!"))
+                    .catch(() => toast.error("Failed to Delete message"));
+                  setShowOptions(false);
+                }}
+              >
+                <MdDelete className="text-red-600" size={14} />
+                <span>Delete</span>
+              </button>
+            )}
           </div>
         )}
       </div>

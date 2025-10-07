@@ -28,7 +28,7 @@ const ChatWindow = ({selectedContact, setSelectedContact}) => {
   const {theme} = useThemeStore();
   const {user} = useUserStore();
 
-  const {messages,loading, sendMessage, receiveMessage,fetchMessages,deletedMessage ,fetchConversations, conversations, isUserTyping, startTyping,stopTyping, getUserLastSeen,isUserOnline,addReaction, cleanup } = useChatStore();
+  const {messages,loading, sendMessage, receiveMessage,fetchMessages,deleteMessage ,fetchConversations, conversations, isUserTyping, startTyping,stopTyping, getUserLastSeen,isUserOnline,addReaction, cleanup } = useChatStore();
 
   // get online status and lastSeen 
   const online = isUserOnline(selectedContact?._id)
@@ -226,7 +226,7 @@ const ChatWindow = ({selectedContact, setSelectedContact}) => {
           theme={theme}
           currentUser={user}
           onReact={handleReactions}
-          deletedMessage={deletedMessage}
+          deleteMessage={deleteMessage}
         />
       ))}
   </React.Fragment>
