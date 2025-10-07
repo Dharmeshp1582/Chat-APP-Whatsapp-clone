@@ -82,7 +82,18 @@ const MessageBubble = ({
               <img
                 className="rounded-lg max-w-xs"
                 src={message.imageOrVideoUrl}
-                alt="Media"
+                alt="image-video"
+              />
+              <p className="mt-1">{message.content}</p>
+            </div>
+          )}
+
+          {message.contentType === "video" && (
+            <div>
+              <video controls
+                className="rounded-lg max-w-xs"
+                src={message.imageOrVideoUrl}
+                alt="image-video"
               />
               <p className="mt-1">{message.content}</p>
             </div>

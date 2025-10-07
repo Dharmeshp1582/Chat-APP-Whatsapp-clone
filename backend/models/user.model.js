@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema({
     type: Date,
   },
  profilePicture:{type:String},
- about:{type:String},
+ about:{type:String,default:"Hey there! I'm using WhatsApp."},
  lastSeen:{
   type:Date,
   default:Date.now
