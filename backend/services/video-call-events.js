@@ -60,9 +60,43 @@ const handleVideoCallEvent = async (socket, io, onlineUsers) => {
         senderId: socket.userId,
         callId
       });
-     }else{
       console.log(`server: Offer forwarded to receiver `);
+     }else{
+      console.log(`server : receiver ${receiverId} is not online`);
+     }
+  })
+
+  // 
+  socket.on("webrtc_answer",  ({answer, receiverId, callId}) => {
+     const receiverSocketId = onlineUsers.get(receiverId);
+
+     if(receiverSocketId) {
+      io.to(receiverSocketId).emit("webrtc_answer", {answer,
+        senderId: socket.userId,
+        callId
+      });
+      console.log(`server: answer forwarded to ${receiverId} `);
+     }else{
+      console.log(`server: receiver ${receiverId} is not online`);
+     }
+  })
+
+  // webice candidate
+  socket.on("webrtc_ice_candidate",  ({candidate, receiverId, callId}) => {
+     const receiverSocketId = onlineUsers.get(receiverId);
+
+     if(receiverSocketId) {
+      io.to(receiverSocketId).emit("webrtc_ice_candidate", {candidate,
+        senderId: socket.userId,
+        callId
+      });
+      console.log(`server: candidate forwarded to ${receiverId} `);
+     }else{
+      console.log(`server: receiver ${receiverId} not found the ICE candidate`);
      }
   })
 
 }
+
+
+export default handleVideoCallEvent

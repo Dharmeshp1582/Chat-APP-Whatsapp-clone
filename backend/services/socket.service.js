@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
+import handleVideoCallEvent from "./video-call-events.js";
 
 const onlineUsers = new Map();
 const typingUsers = new Map();
@@ -20,9 +21,10 @@ const initializeSocket = (server) => {
     let userId = null;
 
     // ✅ Mark user online
-    socket.on("user connected", async (connectingUserId) => {
+    socket.on("user_connected", async (connectingUserId) => {
       try {
         userId = connectingUserId;
+        socket.userId = userId;
         onlineUsers.set(userId, socket.id);
         socket.join(userId);
 
@@ -190,6 +192,8 @@ socket.on("add_reaction", async ({ messageId, emoji, userId: reactionUserId }) =
   }
 });
 
+// handle videocall events 
+handleVideoCallEvent(socket, io, onlineUsers);
 
 
     // ✅ Handle disconnect
