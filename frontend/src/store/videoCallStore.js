@@ -2,60 +2,34 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
 const useVideoCallStore = create(
-  subscribeWithSelector((set) => ({
-    //call state
+  subscribeWithSelector((set, get) => ({
+    // call state
     currentCall: null,
     incomingCall: null,
     isCallActive: false,
-    callType: null, //video or audio call
-    localStream: null, //media state
+    callType: null,
+    localStream: null,
     remoteStream: null,
     isVideoEnabled: true,
     isAudioEnabled: true,
 
-    // webRTC
+    // WebRTC
     peerConnection: null,
-    iceCandidates: [], //queue of ICE candidates
+    iceCandidatesQueue: [], // ✅ renamed and consistent everywhere
 
     isCallModelOpen: false,
-    callStatus: "idle", //idle,calling,ringing,connecting,connected,disconnected
+    callStatus: "idle",
 
-    // Actions
-    setCurrentCall: (call) => {
-      set({ currentCall: call });
-    },
-
-    setIncomingCall: (call) => {
-      set({ incomingCall: call });
-    },
-
-    setCallActive: (active) => {
-      set({ isCallActive: active });
-    },
-
-    setCallType: (type) => {
-      set({ callType: type });
-    },
-
-    setLocalStream: (stream) => {
-      set({ localStream: stream });
-    },
-
-    setRemoteStream: (stream) => {
-      set({ remoteStream: stream });
-    },
-
-    setPeerConnection: (pc) => {
-      set({ peerConnection: pc });
-    },
-
-    setCallModelOpen: (open) => {
-      set({ isCallModelOpen: open });
-    },
-
-    setCallStatus: (status) => {
-      set({ callStatus: status });
-    },
+    // actions
+    setCurrentCall: (call) => set({ currentCall: call }),
+    setIncomingCall: (call) => set({ incomingCall: call }),
+    setCallActive: (active) => set({ isCallActive: active }),
+    setCallType: (type) => set({ callType: type }),
+    setLocalStream: (stream) => set({ localStream: stream }),
+    setRemoteStream: (stream) => set({ remoteStream: stream }),
+    setPeerConnection: (pc) => set({ peerConnection: pc }),
+    setCallModelOpen: (open) => set({ isCallModelOpen: open }),
+    setCallStatus: (status) => set({ callStatus: status }),
 
     addIceCandidate: (candidate) => {
       const { iceCandidatesQueue } = get();
@@ -64,7 +38,6 @@ const useVideoCallStore = create(
 
     processQueuedIceCandidate: async () => {
       const { peerConnection, iceCandidatesQueue } = get();
-
       if (
         peerConnection &&
         peerConnection.remoteDescription &&
@@ -76,7 +49,7 @@ const useVideoCallStore = create(
               new RTCIceCandidate(candidate)
             );
           } catch (error) {
-            console.log("ICE candidate error", error);
+            console.error("ICE candidate error", error);
           }
         }
         set({ iceCandidatesQueue: [] });
@@ -85,7 +58,6 @@ const useVideoCallStore = create(
 
     toggleVideo: () => {
       const { localStream, isVideoEnabled } = get();
-
       if (localStream) {
         const videoTrack = localStream.getVideoTracks()[0];
         if (videoTrack) {
@@ -97,7 +69,6 @@ const useVideoCallStore = create(
 
     toggleAudio: () => {
       const { localStream, isAudioEnabled } = get();
-
       if (localStream) {
         const audioTrack = localStream.getAudioTracks()[0];
         if (audioTrack) {
@@ -106,35 +77,31 @@ const useVideoCallStore = create(
         }
       }
     },
+
     endCall: () => {
       const { localStream, peerConnection } = get();
 
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
-      }
-      if (peerConnection) {
-        peerConnection.close();
-      }
+      if (localStream) localStream.getTracks().forEach((t) => t.stop());
+      if (peerConnection) peerConnection.close();
 
       set({
         currentCall: null,
         incomingCall: null,
         isCallActive: false,
-        callType: null, 
+        callType: null,
         localStream: null,
         remoteStream: null,
         isVideoEnabled: true,
         isAudioEnabled: true,
         peerConnection: null,
-        iceCandidates: [],       isCallModelOpen: false,
+        iceCandidatesQueue: [], // ✅ reset correctly
+        isCallModelOpen: false,
         callStatus: "idle",
       });
     },
-    clearIncomingCall:() => {
-     set({incomingCall:null})
-      }
+
+    clearIncomingCall: () => set({ incomingCall: null }),
   }))
 );
 
-
-export default useVideoCallStore
+export default useVideoCallStore;

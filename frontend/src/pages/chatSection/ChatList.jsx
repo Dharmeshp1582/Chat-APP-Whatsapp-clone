@@ -10,6 +10,7 @@ const ChatList = ({contacts}) => {
 
   const setSelectedContact = useLayoutStore((state) => state.setSelectedContact);
   const selectedContact = useLayoutStore((state) => state.selectedContact);
+  console.log("selected contact is",selectedContact)
   const {theme} = useThemeStore();
   const {user} = useUserStore();
   const [searchTerm,setSearchTerm] = useState('');

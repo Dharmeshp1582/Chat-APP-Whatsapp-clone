@@ -38,7 +38,7 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
 
   const { theme } = useThemeStore();
   const { user } = useUserStore();
-  const { socket } = getSocket();
+  const socket = getSocket();
 
   const {
     messages,
@@ -58,10 +58,16 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
     cleanup,
   } = useChatStore();
 
-  // get online status and lastSeen
-  const online = isUserOnline(selectedContact?._id);
-  const lastSeen = getUserLastSeen(selectedContact?._id);
-  const isTyping = isUserTyping(selectedContact?._id);
+  // get online status and lastSeen (reactive selectors)
+  const online = useChatStore((state) =>
+    state.isUserOnline(selectedContact?._id)
+  );
+  const lastSeen = useChatStore((state) =>
+    state.getUserLastSeen(selectedContact?._id)
+  );
+  const isTyping = useChatStore((state) =>
+    state.isUserTyping(selectedContact?._id)
+  );
 
   useEffect(() => {
     if (selectedContact?._id && conversations?.data?.length > 0) {
@@ -74,11 +80,11 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
         fetchMessages(conversation?._id);
       }
     }
-  }, [selectedContact, conversations]);
+  }, [selectedContact, conversations, fetchMessages]);
 
   useEffect(() => {
     fetchConversations();
-  }, []);
+  }, [fetchConversations]);
 
   const scrollToBottom = () => {
     messageEndRef.current?.scrollIntoView({ behavior: "auto" });
@@ -125,7 +131,8 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
       formData.append("senderId", user?._id);
       formData.append("receiverId", selectedContact?._id);
 
-      const status = online ? "delivered" : "send";
+      // use "sent" as initial status (backend / socket will update)
+      const status = online ? "delivered" : "sent";
 
       formData.append("messageStatus", status);
       if (message.trim()) {
@@ -151,16 +158,76 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
   };
 
   const handleVideoCall = () => {
-    if(selectedContact && online){
-      const {initiateCall} = useVideoCallStore.getState();
+    if (selectedContact && online) {
+      const { initiateCall } = useVideoCallStore.getState();
 
       const avatar = selectedContact?.profilePicture;
 
-      initiateCall(selectedContact?._id,selectedContact?.username,avatar,"video")
-    }else{
-      alert("User is offline.Cannot initiate video call")
+      initiateCall(
+        selectedContact?._id,
+        selectedContact?.username,
+        avatar,
+        "video"
+      );
+    } else {
+      alert("User is offline.Cannot initiate video call");
     }
   };
+
+  // top-level socket listener for incoming messages (was inside renderDateSeparator)
+  useEffect(() => {
+    if (!socket) return;
+    const handleNewMessage = (message) => {
+      // adapt to your message shape - this is defensive
+      const senderId = message?.sender?._id || message?.senderId;
+      const receiverId = message?.receiver?._id || message?.receiverId;
+      if (
+        senderId === selectedContact?._id ||
+        receiverId === selectedContact?._id
+      ) {
+        receiveMessage(message);
+      }
+    };
+
+    socket.on("receive_message", handleNewMessage);
+    return () => {
+      socket.off("receive_message", handleNewMessage);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket, selectedContact, receiveMessage]);
+
+  // polling status for selected contact (keeps lastSeen up-to-date)
+  useEffect(() => {
+  if (!socket || !selectedContact?._id) return;
+
+  const handleNewMessage = (newMsg) => {
+    const senderId = newMsg?.sender?._id || newMsg?.senderId;
+    const receiverId = newMsg?.receiver?._id || newMsg?.receiverId;
+
+    // ✅ Check if the message belongs to the current chat
+    if (
+      senderId === selectedContact?._id ||
+      receiverId === selectedContact?._id
+    ) {
+      receiveMessage(newMsg);
+      scrollToBottom(); // auto-scroll on new message
+    } else {
+      // optional: refetch conversations to update last message preview
+      fetchConversations();
+    }
+  };
+
+  socket.on("receive_message", handleNewMessage);
+
+  // ✅ Listen for message status updates too (optional)
+  socket.on("message_status_updated", fetchMessages);
+
+  return () => {
+    socket.off("receive_message", handleNewMessage);
+    socket.off("message_status_updated", fetchMessages);
+  };
+}, [socket, selectedContact, receiveMessage, fetchMessages, fetchConversations]);
+
 
   const renderDateSeparator = (date) => {
     if (!isValidate(date)) return null;
@@ -188,7 +255,7 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
     );
   };
 
-  //grouping message
+  // grouping message
   const groupedMessages = Array.isArray(messages)
     ? messages.reduce((acc, message) => {
         if (!message.createdAt) return acc;
@@ -207,11 +274,8 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
     : {};
 
   const handleReactions = (messageId, emoji) => {
-    console.log(messageId, "and", "emoji", emoji);
     addReaction(messageId, emoji);
   };
-
-  console.log("selected contact", selectedContact);
 
   if (!selectedContact) {
     return (
@@ -282,7 +346,7 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
                 }`}
               >
                 {online
-                  ? "Online"
+                  ? <span className='text-green-500'>Online</span>
                   : lastSeen
                   ? `last seen ${format(new Date(lastSeen), "HH:mm")}`
                   : "Offline"}
@@ -292,8 +356,12 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
 
           <div className="flex items-center space-x-4">
             <button className="focus:outline-none">
-              <FaVideo className="h-5 w-5 text-green-500 hover:text-green-600" onClick={() => handleVideoCall} title={online ? "Start Video Call" : "User is offline"}  />
-            </button> 
+              <FaVideo
+                className="h-5 w-5 text-green-500 hover:text-green-600"
+                onClick={handleVideoCall}
+                title={online ? "Start Video Call" : "User is offline"}
+              />
+            </button>
             <button className="focus:outline-none">
               <FaEllipsisV className="h-5 w-5" />
             </button>
@@ -329,7 +397,7 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
           <div ref={messageEndRef}></div>
           {filePreview && (
             <div className="relative p-2">
-              {selectedFile.type.startsWith("video/") ? (
+              {selectedFile?.type?.startsWith("video/") ? (
                 <video
                   src={filePreview}
                   controls
@@ -357,26 +425,19 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
         </div>
 
         <div
-          className={`p-4 ${
-            theme === "dark" ? "bg-[#303430]" : "bg-white"
-          } flex items-center space-x-2 relative`}
+          className={`p-4 ${theme === "dark" ? "bg-[#303430]" : "bg-white"} flex items-center space-x-2 relative`}
         >
           <button
             onClick={() => setShowEmojiPicker((prev) => !prev)}
             className="focus:outline-none"
           >
             <FaSmile
-              className={`h-6 w-6 ${
-                theme === "dark" ? "text-gray-400" : "text-gray-500"
-              }`}
+              className={`h-6 w-6 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
             />
           </button>
 
           {showEmojiPicker && (
-            <div
-              ref={emojiPickerRef}
-              className="absolute left-1 bottom-16 z-50"
-            >
+            <div ref={emojiPickerRef} className="absolute left-1 bottom-16 z-50">
               <EmojiPicker
                 onEmojiClick={(emojiObject) => {
                   setMessage((prev) => prev + emojiObject.emoji);
@@ -388,43 +449,22 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
           )}
 
           <div className="relative">
-            <button
-              className="focus:outline-none"
-              onClick={() => setShowFileMenu(!showFileMenu)}
-            >
-              <FaPaperclip
-                className={`h-6 w-6 ${
-                  theme === "dark" ? "text-gray-400" : "text-gray-500"
-                } mt-2`}
-              />
+            <button className="focus:outline-none" onClick={() => setShowFileMenu(!showFileMenu)}>
+              <FaPaperclip className={`h-6 w-6 ${theme === "dark" ? "text-gray-400" : "text-gray-500"} mt-2`} />
             </button>
 
             {showFileMenu && (
-              <div
-                className={`absolute bottom-full left-0 mb-2 ${
-                  theme === "dark" ? "bg-gray-700" : "bg-white"
-                } shadow-lg rounded-lg`}
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/*,video/*"
-                  className="hidden"
-                />
+              <div className={`absolute bottom-full left-0 mb-2 ${theme === "dark" ? "bg-gray-700" : "bg-white"} shadow-lg rounded-lg`}>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*,video/*" className="hidden" />
                 <button
-                  className={`flex items-center px-4 py-2 w-full transition-colors ${
-                    theme === "dark" ? "hover:bg-gray-500" : "bg-gray-100"
-                  }`}
+                  className={`flex items-center px-4 py-2 w-full transition-colors ${theme === "dark" ? "hover:bg-gray-500" : "bg-gray-100"}`}
                   onClick={() => fileInputRef.current.click()}
                 >
                   <FaImage className="mr-2" /> Image/video
                 </button>
 
                 <button
-                  className={`flex items-center px-4 py-2 w-full transition-colors ${
-                    theme === "dark" ? "hover:bg-gray-500" : "bg-gray-100"
-                  }`}
+                  className={`flex items-center px-4 py-2 w-full transition-colors ${theme === "dark" ? "hover:bg-gray-500" : "bg-gray-100"}`}
                   onClick={() => fileInputRef.current.click()}
                 >
                   <FaImage className="mr-2" /> Documents
@@ -443,17 +483,10 @@ const ChatWindow = ({ selectedContact, setSelectedContact }) => {
               }
             }}
             placeholder="type a message..."
-            className={`flex-grow px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 ${
-              theme === "dark"
-                ? "bg-gray-700 text-white border-gray-600"
-                : "bg-white text-black border-gray-300"
-            }`}
+            className={`flex-grow px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 ${theme === "dark" ? "bg-gray-700 text-white border-gray-600" : "bg-white text-black border-gray-300"}`}
           />
           <button className="focus:outline-none">
-            <FaPaperPlane
-              onClick={handleSendMessage}
-              className="w-6 h-6 text-green-500"
-            />
+            <FaPaperPlane onClick={handleSendMessage} className="w-6 h-6 text-green-500" />
           </button>
         </div>
       </div>

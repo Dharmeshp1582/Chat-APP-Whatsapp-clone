@@ -84,6 +84,7 @@ const handleVideoCallEvent = async (socket, io, onlineUsers) => {
   // webice candidate
   socket.on("webrtc_ice_candidate",  ({candidate, receiverId, callId}) => {
      const receiverSocketId = onlineUsers.get(receiverId);
+     console.log("connecting ice candidate")
 
      if(receiverSocketId) {
       io.to(receiverSocketId).emit("webrtc_ice_candidate", {candidate,
